@@ -21,6 +21,8 @@ class Board:
                 random_list.append(mine_pos)
                 i = i + 1
 
+        print(random_list)
+
         return random_list
 
     # Método que inicializa la lista de celdas y la lista de strings
@@ -45,19 +47,21 @@ class Board:
 
         return board   
 
-    # Método que permite descubrir expansivamente las celdas que no tiene mina
-    def flood_fill(self, i, j):
-        row_range = range(i - 1, i + 2)
-        col_range = range(j - 1, j + 2)
-
-        for row in row_range:
-            for col in col_range:
-                if(0 <= row < self.height and 0 <= col < self.width and not self.board[row][col].get_mine() and not self.board[row][col].get_flag() and not self.board[i][j].get_mine()):                       
-                    self.board[row][col].set_unselected(False)
-                    self.board[row][col].set_selected(True)
-
-                    if(0 <= i+1 < self.height and 0 <= j < self.width):
-                        self.flood_fill(i+1, j)
+    # Método que permite descubrir expansivamente las celdas que no tiene mina    
+    def flood_fill(self, x, y):
+        for xoff in [-1, 0, 1]:
+            i = x + xoff
+            if i < 0 or i >= self.height:
+                continue
+            for yoff in [-1, 0, 1]:
+                j = y + yoff
+                if j < 0 or j >= self.width:
+                    continue
+                if not self.board[i][j].get_mine() and not self.board[i][j].get_selected() and not self.board[x][y].get_mine():
+                    self.board[i][j].set_selected(True)
+                    self.board[i][j].set_unselected(False)
+                    if self.board[i][j].get_number() == 0:
+                        self.flood_fill(i, j)
 
     # Método que actualiza la lista de celdas y la de strings
     def updateBoard(self):
@@ -107,11 +111,12 @@ class Board:
             cell = self.board[row][col]
 
             if action == 'U':
+
+                self.flood_fill(row, col)
+
                 cell.set_unselected(False)
                 cell.set_selected(True)
-                cell.set_flag(False)  
-
-                #self.flood_fill(row, col)
+                cell.set_flag(False)                  
 
                 if [row,col] in self.list_pos_flags:
                     self.list_pos_flags.remove([row,col])
@@ -196,6 +201,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    
 
     
 
