@@ -1,43 +1,17 @@
 from random import randrange
 
-"""class Table:
-
-    height = 0
-    width = 0
-    mines = 0
-
-    def __init(self, height, width, mines):
-        self.height = height
-        self.width = width
-        self.mines = mines
-
-def mine_sweeper(bombs, num_rows, num_cols):
-    field = [[0 for i in range(num_cols)] for j in range(num_rows)]
-
-    for bomb_location in bombs:
-        (bomb_row, bomb_col) = bomb_location
-        field[bomb_row][bomb_col] = -1
-
-        row_range = range(bomb_row - 1, bomb_row + 2)
-        col_range = range(bomb_col - 1, bomb_col + 2)
-
-        for i in row_range:
-            for j in col_range:
-                if(0 <= i < num_rows and 0 <= j < num_cols and field[i][j] != -1):
-                    field[i][j] += 1
-
-    return field
-
-print(mine_sweeper([[0,0],[1,2]], 3, 4))"""
-
 class Board:
     height = 0
     width = 0
     mines = 0
-    list_pos_mines = []
-    board = []
+    list_pos_mines = [] # Lista de posiciones donde se van a encontrar las minas
+    list_pos_flags = [] # Lista de posiciones donde se van a encontrar las banderas
+    board = [] # Lista de objetos tipo celda
+    str_board = [] # Lista de strings
     game_over = False
+    game_wined = False
     
+    # Método que genera la posición pseudo-aleatoria de cada mina
     def generate_pos(self):
         random_list = []
         i = 0
@@ -47,22 +21,23 @@ class Board:
                 random_list.append(mine_pos)
                 i = i + 1
 
-        print('Bombs:')       
-        print(random_list)
-
         return random_list
 
+    # Método que inicializa la lista de celdas y la lista de strings
     def generate_board(self):
         board = [[Cell() for i in range(self.width)] for j in range(self.height)]
+        self.str_board = [['.' for i in range(self.width)] for j in range(self.height)]        
 
         for mine_location in self.list_pos_mines:
             (mine_row, mine_col) = mine_location
             board[mine_row][mine_col].set_mine(True)
             board[mine_row][mine_col].set_number(-1)
 
+            # Rango donde se buscaran las minas adyacentes a cada celda
             row_range = range(mine_row - 1, mine_row + 2)
             col_range = range(mine_col - 1, mine_col + 2)
 
+            # Ciclo que permite encontrar el número de minas adyacentes a cada celda
             for i in row_range:
                 for j in col_range:
                     if(0 <= i < self.height and 0 <= j < self.width and not board[i][j].get_mine()):                       
@@ -70,57 +45,93 @@ class Board:
 
         return board   
 
-    def drawBoard(self):
-        str_board = ""
+    # Método que permite descubrir expansivamente las celdas que no tiene mina
+    def flood_fill(self, i, j):
+        row_range = range(i - 1, i + 2)
+        col_range = range(j - 1, j + 2)
+
+        for row in row_range:
+            for col in col_range:
+                if(0 <= row < self.height and 0 <= col < self.width and not self.board[row][col].get_mine() and not self.board[row][col].get_flag() and not self.board[i][j].get_mine()):                       
+                    self.board[row][col].set_unselected(False)
+                    self.board[row][col].set_selected(True)
+
+                    if(0 <= i+1 < self.height and 0 <= j < self.width):
+                        self.flood_fill(i+1, j)
+
+    # Método que actualiza la lista de celdas y la de strings
+    def updateBoard(self):
         for i in range(self.height):
             for j in range(self.width):                
                 cell = self.board[i][j] 
-
+                
                 if self.game_over:
                     if cell.get_mine():
                         cell.set_unselected(False)
                         cell.set_selected(False)
                         cell.set_flag(False)  
-                        str_board += '* '
+                        self.str_board[i][j] = '*'
                        
                 if cell.get_flag():
-                    str_board += 'P '
-                    
-                if cell.get_unselected():
-                    str_board += '. '
-                    
+                    self.str_board[i][j] = 'P'
+                                    
                 if cell.get_selected():
                     if cell.get_number() == 0:
-                        str_board += '- '
-                        
+                        self.str_board[i][j] = '-'                        
                     else: 
-                        str_board += str(cell.get_number())+" "
-                
-                                        
-            str_board+="\n"
+                        self.str_board[i][j] = str(cell.get_number())
+        
+    # Método que imprime en consola el tablero del juego
+    def drawBoard(self):
+        show = ""
+        for i in range(self.height):
+            for j in range(self.width):
+                show += self.str_board[i][j] + " "
+            show += '\n'
 
-        print(str_board)  
+        if self.game_wined:
+            show += '¡You Win!'
+        if self.game_over:
+            show += '¡You Lost!'
 
+        print(show) 
+
+
+    # Método que permite al usuario seleccionar la celda y la accion en cada turno
+    # Además de evaluar el fin del juego 
     def start_game(self):
-        while not self.game_over:
+        while not self.game_over and not self.game_wined:
             pos_x, pos_y, action = map(str, input().split())
             row = int(pos_x)
             col = int(pos_y)
+            cell = self.board[row][col]
 
             if action == 'U':
-                self.board[row][col].set_unselected(False)
-                self.board[row][col].set_selected(True)
-                self.board[row][col].set_flag(False)                 
-            elif action == 'M':
-                self.board[row][col].set_flag(True)  
-                self.board[row][col].set_unselected(False)
-                self.board[row][col].set_selected(False)               
+                cell.set_unselected(False)
+                cell.set_selected(True)
+                cell.set_flag(False)  
 
-            if self.board[row][col].get_mine() and not self.board[row][col].get_flag():
+                #self.flood_fill(row, col)
+
+                if [row,col] in self.list_pos_flags:
+                    self.list_pos_flags.remove([row,col])
+
+            elif action == 'M' and not cell.get_selected():
+                cell.set_flag(True)  
+                cell.set_unselected(False)
+                cell.set_selected(False)
+                self.list_pos_flags.append([row,col])               
+
+            if cell.get_mine() and not cell.get_flag():
                 self.game_over = True  
+            elif len(self.list_pos_flags) == len(self.list_pos_mines):
+                if self.list_pos_flags == self.list_pos_mines:
+                    self.game_wined = True
 
-            self.drawBoard()    
+            self.updateBoard() 
+            self.drawBoard()   
 
+    # Constructor de la clase Board
     def __init__(self, height, width, mines):
         self.height = height
         self.width = width
@@ -129,6 +140,8 @@ class Board:
         self.board = self.generate_board()
     
 class Cell:
+
+    # Atributos de la clase
     unselected = True
     disable = False
     mine = False
@@ -136,6 +149,7 @@ class Cell:
     number = 0
     selected = False   
 
+    # Métodos set
     def set_unselected(self, unselected):
         self.unselected = unselected
 
@@ -154,6 +168,7 @@ class Cell:
     def set_selected(self, selected):
         self.selected = selected
 
+    # Métodos get
     def get_unselected(self):
         return self.unselected
 
@@ -181,5 +196,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    
+
 
     
