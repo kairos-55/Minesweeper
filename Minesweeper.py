@@ -21,8 +21,6 @@ class Board:
                 random_list.append(mine_pos)
                 i = i + 1
 
-        print(random_list)
-
         return random_list
 
     # Método que inicializa la lista de celdas y la lista de strings
